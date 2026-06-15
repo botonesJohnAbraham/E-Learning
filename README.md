@@ -1,2 +1,2 @@
-# New_NextJs_Project
+# E-Learning App
 Testing building NextJS app
