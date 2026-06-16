@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser, setCurrentUser } from "../utils/auth";
+import { loginWithSupabase } from "../utils/supabaseAuth";
+import { setCurrentUser } from "../utils/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,19 +20,30 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const res = loginUser(email, password);
+    (async () => {
+      const res = await loginWithSupabase(email, password);
       setLoading(false);
       if (!res.ok) {
         setError(res.error || "Login failed");
         return;
       }
-      setCurrentUser(res.user || null);
-      // redirect based on role
-      if (res.user?.role === "teacher") router.push("/teacher");
-      else if (res.user?.role === "admin") router.push("/admin");
+
+      const user = (res.data?.user || res.data?.session?.user) as any;
+      const role = user?.user_metadata?.role || "student";
+      const mapped = {
+        name: user?.user_metadata?.name || user?.email || "",
+        email: user?.email || "",
+        password: "",
+        role: role,
+      };
+
+      setCurrentUser(mapped as any);
+
+      // Route based on role
+      if (role === "teacher") router.push("/teacher");
+      else if (role === "admin") router.push("/admin");
       else router.push("/student");
-    }, 400);
+    })();
   };
   
   return (

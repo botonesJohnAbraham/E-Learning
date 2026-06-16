@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerUser } from "../utils/auth";
+import { registerWithSupabase } from "../utils/supabaseAuth";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,15 +26,16 @@ export default function RegisterPage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const res = registerUser({ name, email, password, role });
+    (async () => {
+      const res = await registerWithSupabase({ name, email, password, role });
       setLoading(false);
       if (!res.ok) {
         setError(res.error || "Registration failed");
         return;
       }
+      // registration success — redirect to login (email confirmation may be required)
       router.push("/login");
-    }, 500);
+    })();
   };
 
   return (

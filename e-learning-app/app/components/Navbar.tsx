@@ -3,20 +3,89 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, setCurrentUser, User } from "../utils/auth";
+import { supabase } from "../lib/supabaseClient";
+import { setCurrentUser } from "../utils/auth";
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    setUser(getCurrentUser());
-    const onStorage = () => setUser(getCurrentUser());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data?.user;
+      if (u && mounted) {
+        let role = u.user_metadata?.role || "student";
+        const name = u.user_metadata?.name || u.email || "User";
+        
+        // Fetch profile to ensure we have the correct role
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", u.id)
+            .single();
+          if (profile) role = profile.role || role;
+        } catch (e) {
+          // ignore profile fetch errors
+        }
+        
+        const mapped = {
+          name,
+          email: u.email || "",
+          role,
+        };
+        setUser(mapped);
+        setCurrentUser(mapped as any);
+      }
+    })();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user || null;
+      if (u) {
+        (async () => {
+          let role = u.user_metadata?.role || "student";
+          const name = u.user_metadata?.name || u.email || "User";
+          
+          // Fetch profile to ensure we have the correct role
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", u.id)
+              .single();
+            if (profile) role = profile.role || role;
+          } catch (e) {
+            // ignore profile fetch errors
+          }
+          
+          const mapped = {
+            name,
+            email: u.email || "",
+            role,
+          };
+          setUser(mapped);
+          setCurrentUser(mapped as any);
+        })();
+      } else {
+        setUser(null);
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      try {
+        listener?.subscription.unsubscribe();
+      } catch {}
+    };
   }, []);
 
-  function logout() {
+  async function logout() {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     setCurrentUser(null);
     setUser(null);
     router.push("/");
@@ -44,7 +113,7 @@ export default function Navbar() {
             <>
               <Link
                 href="/login"
-                className="rounded-full border border-white/20 px-3 py-1 text-sm transition hover:bg-white/6"
+                className="rounded-full bg-white/6 px-3 py-1 text-sm font-medium text-white transition hover:bg-white/10"
               >
                 Login
               </Link>
@@ -57,11 +126,14 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex items-center gap-3">
+              <div className="text-sm text-slate-200">
+                Welcome, <span className="font-semibold text-white">{user?.name || "User"}</span>
+              </div>
               <Link
-                href={user.role === "teacher" ? "/teacher" : user.role === "admin" ? "/admin" : "/student"}
+                href={user?.role === "teacher" ? "/teacher" : user?.role === "admin" ? "/admin" : "/student"}
                 className="rounded-full border border-white/10 px-3 py-1 text-sm transition hover:bg-white/6"
               >
-                {user.name || user.email}
+                Dashboard
               </Link>
               <button
                 onClick={logout}
