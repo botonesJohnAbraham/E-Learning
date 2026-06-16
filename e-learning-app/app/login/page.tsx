@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-n  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!email || !password) {
@@ -33,7 +33,7 @@ n  const onSubmit = (e: React.FormEvent) => {
       else router.push("/student");
     }, 400);
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg dark:bg-zinc-900">
@@ -54,9 +54,9 @@ n  const onSubmit = (e: React.FormEvent) => {
             className="rounded-md border px-3 py-2 text-sm"
           />
 
-n          {error && <div className="text-sm text-red-500">{error}</div>}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
-n          <button
+          <button
             type="submit"
             disabled={loading}
             className="mt-3 rounded-full bg-cyan-500 px-4 py-2 font-semibold text-slate-950 disabled:opacity-60"
