@@ -2,10 +2,11 @@ import { supabase } from "../lib/supabaseClient";
 
 export async function registerWithSupabase({ name, email, password, role }: { name: string; email: string; password: string; role: string; }) {
   try {
-    const { data, error } = await supabase.auth.signUp(
-      { email, password },
-      { data: { name, role } }
-    );
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, role } },
+    });
     if (error) return { ok: false, error: error.message, data: null };
 
     // Insert/upsert into profiles table to ensure role is stored

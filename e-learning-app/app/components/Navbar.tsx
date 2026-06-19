@@ -12,62 +12,53 @@ export default function Navbar() {
 
   useEffect(() => {
     let mounted = true;
+
+    async function loadSupabaseUser(u: any) {
+      let role = u.user_metadata?.role || "student";
+      let name = u.user_metadata?.name || "";
+
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, name")
+          .eq("id", u.id)
+          .single();
+        if (profile) {
+          role = profile.role || role;
+          name = profile.name || name;
+        }
+      } catch (e) {
+        // ignore profile fetch errors
+      }
+
+      if (!name) {
+        name = u.email || "User";
+      }
+
+      const mapped = {
+        name,
+        email: u.email || "",
+        role,
+      };
+
+      if (mounted) {
+        setUser(mapped);
+        setCurrentUser(mapped as any);
+      }
+    }
+
     (async () => {
       const { data } = await supabase.auth.getUser();
       const u = data?.user;
-      if (u && mounted) {
-        let role = u.user_metadata?.role || "student";
-        const name = u.user_metadata?.name || u.email || "User";
-        
-        // Fetch profile to ensure we have the correct role
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", u.id)
-            .single();
-          if (profile) role = profile.role || role;
-        } catch (e) {
-          // ignore profile fetch errors
-        }
-        
-        const mapped = {
-          name,
-          email: u.email || "",
-          role,
-        };
-        setUser(mapped);
-        setCurrentUser(mapped as any);
+      if (u) {
+        await loadSupabaseUser(u);
       }
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user || null;
       if (u) {
-        (async () => {
-          let role = u.user_metadata?.role || "student";
-          const name = u.user_metadata?.name || u.email || "User";
-          
-          // Fetch profile to ensure we have the correct role
-          try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", u.id)
-              .single();
-            if (profile) role = profile.role || role;
-          } catch (e) {
-            // ignore profile fetch errors
-          }
-          
-          const mapped = {
-            name,
-            email: u.email || "",
-            role,
-          };
-          setUser(mapped);
-          setCurrentUser(mapped as any);
-        })();
+        loadSupabaseUser(u);
       } else {
         setUser(null);
         setCurrentUser(null);
@@ -129,12 +120,6 @@ export default function Navbar() {
               <div className="text-sm text-slate-200">
                 Welcome, <span className="font-semibold text-white">{user?.name || "User"}</span>
               </div>
-              <Link
-                href={user?.role === "teacher" ? "/teacher" : user?.role === "admin" ? "/admin" : "/student"}
-                className="rounded-full border border-white/10 px-3 py-1 text-sm transition hover:bg-white/6"
-              >
-                Dashboard
-              </Link>
               <button
                 onClick={logout}
                 className="rounded-full bg-red-500 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-400"
